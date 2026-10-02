@@ -10,6 +10,9 @@ let
   claudeDesktopRev = "5007b9c968b87df7a3f641e4ff29958934eeb60c";
   claudeDesktop = (builtins.getFlake "github:aaddrick/claude-desktop-debian/${claudeDesktopRev}")
     .packages.${pkgs.stdenv.hostPlatform.system}.claude-desktop-fhs;
+
+  # KDE-плагин обоев для waywallen — свой пакет, см. pkgs/waywallen-display.nix
+  waywallenDisplay = pkgs.kdePackages.callPackage ./pkgs/waywallen-display.nix { };
 in
 {
   imports = [ ./hardware-configuration.nix ];
@@ -90,6 +93,10 @@ in
     enableVirtualCamera = true;                     # «виртуальная камера» для Zoom/Discord (модуль ядра v4l2loopback)
   };
 
+  # --- Flatpak ---
+  services.flatpak.enable = true;                   # программы с Flathub в отдельной «коробке» (сейчас: waywallen);
+                                                    # сами программы ставятся командой flatpak, не через этот файл
+
   # --- Базы данных ---
   services.postgresql = {
     enable = true;
@@ -144,8 +151,8 @@ in
     # Файлы и торренты
     qbittorrent
 
-    # Обои Wallpaper Engine на рабочем столе KDE
-    kdePackages.wallpaper-engine-plugin
+    # Живые обои: KDE-часть waywallen (сама программа — через Flatpak)
+    waywallenDisplay
 
     # Разное
     wget curl htop
