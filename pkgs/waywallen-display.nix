@@ -29,6 +29,11 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-qFCKUQSfx+bjbbfkj/REIf4w4U09sPCcilHI0lE6YqQ=";
   };
 
+  # Своя доработка: ползунки насыщенности, яркости и контраста в настройках
+  # обоев KDE (MultiEffect поверх кадра). При обновлении версии может
+  # перестать применяться — тогда пересоздать патч.
+  patches = [ ./waywallen-display-color-adjust.patch ];
+
   nativeBuildInputs = [
     cmake
     pkg-config
