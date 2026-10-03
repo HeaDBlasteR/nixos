@@ -97,6 +97,29 @@ in
   services.flatpak.enable = true;                   # программы с Flathub в отдельной «коробке» (сейчас: waywallen);
                                                     # сами программы ставятся командой flatpak, не через этот файл
 
+  # --- Шрифты ---
+  # Calibri и Cambria (шрифты Word) на Linux нет — показывать вместо них
+  # Times New Roman (его роль играет метрически совместимый Liberation Serif).
+  # Cambria Math не трогаем: это шрифт формул, обычный TNR сломает символы.
+  fonts.fontconfig.localConf = ''
+    <?xml version="1.0"?>
+    <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+    <fontconfig>
+      <match target="pattern">
+        <test name="family" qual="any" compare="eq"><string>Calibri</string></test>
+        <edit name="family" mode="assign" binding="strong"><string>Times New Roman</string><string>Liberation Serif</string></edit>
+      </match>
+      <match target="pattern">
+        <test name="family" qual="any" compare="eq"><string>Calibri Light</string></test>
+        <edit name="family" mode="assign" binding="strong"><string>Times New Roman</string><string>Liberation Serif</string></edit>
+      </match>
+      <match target="pattern">
+        <test name="family" qual="any" compare="eq"><string>Cambria</string></test>
+        <edit name="family" mode="assign" binding="strong"><string>Times New Roman</string><string>Liberation Serif</string></edit>
+      </match>
+    </fontconfig>
+  '';
+
   # --- Базы данных ---
   services.postgresql = {
     enable = true;
@@ -147,6 +170,10 @@ in
     # Браузеры и общение
     google-chrome
     telegram-desktop
+
+    # Офис: .docx/.doc/.pptx/.xlsx; Qt6-версия встраивается в KDE, still — стабильная ветка
+    libreoffice-qt6-still
+    hunspellDicts.ru_RU             # русская проверка орфографии (LibreOffice находит словари сам)
 
     # Файлы и торренты
     qbittorrent
