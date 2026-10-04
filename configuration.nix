@@ -97,6 +97,33 @@ in
   services.flatpak.enable = true;                   # программы с Flathub в отдельной «коробке» (сейчас: waywallen);
                                                     # сами программы ставятся командой flatpak, не через этот файл
 
+  # --- Синхронизация хранилища Obsidian с ПК ---
+  # Syncthing передаёт файлы напрямую между моими машинами, без облака.
+  # Веб-интерфейс: http://127.0.0.1:8384
+  services.syncthing = {
+    enable = true;
+    user = "kuragy";                                # работает от моего имени: файлы в ~ принадлежат мне
+    dataDir = "/home/kuragy";
+    openDefaultPorts = true;                        # 22000 — передача файлов, 21027/udp — поиск машин в локальной сети
+    settings = {
+      options.urAccepted = -1;                      # не отправлять анонимную статистику
+      devices.pc = {                                # ПК (Windows 11); ID — Syncthing → Действия → Показать ID
+        id = "WAYEFTG-H3OQ7XN-TITS4NG-ERDC4JG-EWAKDZG-YQTTON3-XPMUR37-R5YSJA2";
+        name = "ПК";
+      };
+      folders.obsidian = {
+        id = "obsidian";                            # одинаковый ID на ноутбуке и ПК
+        label = "Obsidian";
+        path = "/home/kuragy/Obsidian";
+        devices = [ "pc" ];                         # с кем синхронизировать
+        versioning = {                              # удалённое или заменённое с другой машины
+          type = "trashcan";                        # 30 дней лежит в ~/Obsidian/.stversions
+          params.cleanoutDays = "30";
+        };
+      };
+    };
+  };
+
   # --- Шрифты ---
   # Calibri и Cambria (шрифты Word) на Linux нет — показывать вместо них
   # Times New Roman (его роль играет метрически совместимый Liberation Serif).
@@ -138,6 +165,7 @@ in
   environment.systemPackages = with pkgs; [
     # Редакторы
     vscode
+    obsidian                        # заметки; хранилище ~/Obsidian синхронизируется с ПК через Syncthing
 
     # Claude
     claudeDesktop                   # Claude Desktop (неофициальная сборка, см. let в начале файла)
