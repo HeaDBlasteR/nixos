@@ -110,6 +110,7 @@ in
       devices.pc = {                                # ПК (Windows 11); ID — Syncthing → Действия → Показать ID
         id = "WAYEFTG-H3OQ7XN-TITS4NG-ERDC4JG-EWAKDZG-YQTTON3-XPMUR37-R5YSJA2";
         name = "ПК";
+        addresses = [ "tcp://10.8.1.5:22000" ];     # только через туннель Amnezia: по LAN ответы ПК уходят в VPN
       };
       folders.obsidian = {
         id = "obsidian";                            # одинаковый ID на ноутбуке и ПК
