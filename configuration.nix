@@ -1,12 +1,9 @@
 { config, pkgs, ... }:
 
 let
-  # Пакеты из ветки unstable — для программ, которым нужна версия новее, чем в 26.05
+  # Пакеты из ветки unstable
   unstable = import <nixos-unstable> { config = config.nixpkgs.config; };
 
-  # Неофициальная сборка Claude Desktop (перепаковка официального .deb от Anthropic).
-  # Закреплена на конкретный коммит: обновление — только вручную, сменой хеша
-  # (последний коммит: https://github.com/aaddrick/claude-desktop-debian/commits/main)
   claudeDesktopRev = "5007b9c968b87df7a3f641e4ff29958934eeb60c";
   claudeDesktop = (builtins.getFlake "github:aaddrick/claude-desktop-debian/${claudeDesktopRev}")
     .packages.${pkgs.stdenv.hostPlatform.system}.claude-desktop-fhs;
@@ -21,23 +18,24 @@ in
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.systemd-boot.configurationLimit = 10;  # не больше 10 систем в меню: /boot всего 1 ГБ
-  boot.kernelPackages = pkgs.linuxPackages_latest;  # свежее ядро = лучше поддержка нового железа
+  boot.loader.timeout = 1;
+  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   # --- Система ---
   networking.hostName = "redmibook";
-  networking.networkmanager.enable = true;          # Wi-Fi через значок в трее
-  services.resolved.settings.Resolve.LLMNR = false; # не отвечать на поиск имён от чужих устройств в сети
+  networking.networkmanager.enable = true;
+  services.resolved.settings.Resolve.LLMNR = false;
   time.timeZone = "Europe/Moscow";
   i18n.defaultLocale = "ru_RU.UTF-8";
 
   # --- Железо ---
-  hardware.enableRedistributableFirmware = true;    # прошивки Wi-Fi, звука (SOF), Bluetooth
+  hardware.enableRedistributableFirmware = true;
   hardware.bluetooth.enable = true;
   hardware.graphics = {
     enable = true;
-    extraPackages = [ pkgs.intel-media-driver ];    # аппаратное декодирование видео Intel
+    extraPackages = [ pkgs.intel-media-driver ];
   };
-  services.fwupd.enable = true;                     # обновление прошивок устройств из Linux
+  services.fwupd.enable = true;
 
   # --- KDE Plasma 6 ---
   services.displayManager.sddm.enable = true;
@@ -46,79 +44,87 @@ in
   environment.sessionVariables.NIXOS_OZONE_WL = "1"; # VS Code, Chrome и др. Electron-приложения
                                                      # работают нативно под Wayland, без размытия на 200%
 
+  # --- Программы по умолчанию ---
+  xdg.mime.defaultApplications = pkgs.lib.genAttrs [
+    "text/plain"
+    "text/markdown" "application/json" "application/x-yaml" "application/toml"
+    "text/x-csrc" "text/x-c++src" "text/x-chdr" "text/x-c++hdr"
+    "text/x-csharp" "text/x-python" "text/x-python3" "application/x-shellscript"
+    "text/javascript" "text/css"
+    "text/x-cmake" "text/x-makefile" "text/x-nix"
+    "application/sql" "text/x-sql"
+  ] (_: "code.desktop");
+
   # --- Звук ---
   services.pulseaudio.enable = false;               # старый звуковой сервер выключен, его заменяет PipeWire
-  security.rtkit.enable = true;                     # приоритет реального времени для звука: не трещит под нагрузкой
+  security.rtkit.enable = true;
   services.pipewire = {
     enable = true;
     alsa.enable = true;
-    alsa.support32Bit = true;                       # звук для 32-битных программ (нужно Steam)
+    alsa.support32Bit = true;
     pulse.enable = true;
   };
 
   # --- Пользователь ---
   users.users.kuragy = {
     isNormalUser = true;
-    description = "artyom";                         # отображаемое имя на экране входа
-    extraGroups = [ "wheel" "networkmanager" ];     # wheel = право на sudo
+    description = "artyom";
+    extraGroups = [ "wheel" "networkmanager" ];
   };
 
   # --- Nix ---
-  nixpkgs.config.allowUnfree = true;                # разрешить несвободные пакеты (VS Code, Chrome, Steam)
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];  # новые команды nix; flakes этим не навязываются
-  nix.settings.auto-optimise-store = true;          # одинаковые файлы в /nix/store хранятся один раз
+  nixpkgs.config.allowUnfree = true;
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings.auto-optimise-store = true;
   nix.settings.substituters = [ "https://mirror.yandex.ru/nixos?priority=10" ];  # зеркало Яндекса первым,
                                                     # официальный cache.nixos.org остаётся запасным
   nix.gc = {
     automatic = true;
     dates = "weekly";
-    options = "--delete-older-than 14d";            # чистить поколения старше 2 недель
+    options = "--delete-older-than 14d";
   };
 
   # --- Совместимость и удобство разработки ---
   programs.nix-ld.enable = true;    # чтобы запускались чужие бинарники и pip-колёса с C-кодом
-  programs.direnv.enable = true;    # автоактивация окружения проекта при входе в папку
-  programs.git.enable = true;       # модуль сам ставит пакет git
+  programs.direnv.enable = true;
+  programs.git.enable = true;
 
   # --- VPN ---
   programs.amnezia-vpn = {
     enable = true;
-    package = unstable.amnezia-vpn;                 # 5.0.x из unstable (в 26.05 только 4.8)
+    package = unstable.amnezia-vpn;                 # 5.0.x из unstable
   };
 
   # --- Steam и запись экрана ---
-  programs.steam.enable = true;                     # Steam: 32-битные библиотеки, FHS-окружение, udev
+  programs.steam.enable = true;                     # Steam
   programs.obs-studio = {                           # OBS
     enable = true;
-    enableVirtualCamera = true;                     # «виртуальная камера» для Zoom/Discord (модуль ядра v4l2loopback)
+    enableVirtualCamera = true;                     # «виртуальная камера» для Zoom/Discord
   };
 
   # --- Flatpak ---
-  services.flatpak.enable = true;                   # программы с Flathub в отдельной «коробке» (сейчас: waywallen);
-                                                    # сами программы ставятся командой flatpak, не через этот файл
+  services.flatpak.enable = true;                   # программы с Flathub
 
-  # --- Синхронизация хранилища Obsidian с ПК ---
-  # Syncthing передаёт файлы напрямую между моими машинами, без облака.
-  # Веб-интерфейс: http://127.0.0.1:8384
+  # --- Синхронизация хранилища Obsidian ---
   services.syncthing = {
     enable = true;
-    user = "kuragy";                                # работает от моего имени: файлы в ~ принадлежат мне
+    user = "kuragy";
     dataDir = "/home/kuragy";
-    openDefaultPorts = true;                        # 22000 — передача файлов, 21027/udp — поиск машин в локальной сети
+    openDefaultPorts = true;
     settings = {
       options.urAccepted = -1;                      # не отправлять анонимную статистику
-      devices.pc = {                                # ПК (Windows 11); ID — Syncthing → Действия → Показать ID
+      devices.pc = {
         id = "WAYEFTG-H3OQ7XN-TITS4NG-ERDC4JG-EWAKDZG-YQTTON3-XPMUR37-R5YSJA2";
         name = "ПК";
-        addresses = [ "tcp://10.8.1.5:22000" ];     # только через туннель Amnezia: по LAN ответы ПК уходят в VPN
+        addresses = [ "tcp://10.8.1.5:22000" ];     # только через туннель Amnezia
       };
       folders.obsidian = {
         id = "obsidian";                            # одинаковый ID на ноутбуке и ПК
         label = "Obsidian";
         path = "/home/kuragy/Obsidian";
         devices = [ "pc" ];                         # с кем синхронизировать
-        versioning = {                              # удалённое или заменённое с другой машины
-          type = "trashcan";                        # 30 дней лежит в ~/Obsidian/.stversions
+        versioning = {
+          type = "trashcan";
           params.cleanoutDays = "30";
         };
       };
@@ -126,9 +132,6 @@ in
   };
 
   # --- Шрифты ---
-  # Calibri и Cambria (шрифты Word) на Linux нет — показывать вместо них
-  # Times New Roman (его роль играет метрически совместимый Liberation Serif).
-  # Cambria Math не трогаем: это шрифт формул, обычный TNR сломает символы.
   fonts.fontconfig.localConf = ''
     <?xml version="1.0"?>
     <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
@@ -154,33 +157,32 @@ in
     package = pkgs.postgresql_17;
     ensureDatabases = [ "kuragy" ];                 # своя база с именем пользователя: `psql` без аргументов
     ensureUsers = [{
-      name = "kuragy";                              # роль = имя в Linux → вход без пароля через сокет (peer)
-      ensureDBOwnership = true;                     # владелец базы kuragy
-      ensureClauses.createdb = true;                # право создавать базы для лабораторных
+      name = "kuragy";
+      ensureDBOwnership = true;
+      ensureClauses.createdb = true;
     }];
-    # Пароль (для pgAdmin/DBeaver) задаётся вручную в psql: \password
-    # Не в конфиге: всё отсюда попадает в /nix/store, а его читают все пользователи
   };
 
   # --- Программы ---
   environment.systemPackages = with pkgs; [
     # Редакторы
     vscode
-    obsidian                        # заметки; хранилище ~/Obsidian синхронизируется с ПК через Syncthing
+    obsidian
 
     # Claude
-    claudeDesktop                   # Claude Desktop (неофициальная сборка, см. let в начале файла)
-    unstable.claude-code            # Claude Code в терминале: из unstable, т.к. обновляется очень часто
+    claudeDesktop
+    unstable.claude-code
+
+    # Nix
+    nil                             # языковой сервер Nix
 
     # C / C++
     gcc gdb gnumake cmake
-    clang-tools                     # clangd: автодополнение и подсказки для C/C++ в редакторе
+    clang-tools                     # автодополнение и подсказки для C/C++ в редакторе
     valgrind                        # поиск утечек памяти и выходов за границы массивов
     man-pages man-pages-posix       # справка по функциям C: `man 3 printf`, `man 3p pthread_create`
 
     # C#
-    # Две версии SDK в одной команде `dotnet`: проект сам выбирает нужную
-    # через <TargetFramework> (net8.0 / net10.0). Поддержка .NET 8 — до 10.11.2026
     (dotnetCorePackages.combinePackages [
       dotnetCorePackages.sdk_8_0
       dotnetCorePackages.sdk_10_0
@@ -200,14 +202,14 @@ in
     google-chrome
     telegram-desktop
 
-    # Офис: .docx/.doc/.pptx/.xlsx; Qt6-версия встраивается в KDE, still — стабильная ветка
+    # Офис
     libreoffice-qt6-still
-    hunspellDicts.ru_RU             # русская проверка орфографии (LibreOffice находит словари сам)
+    hunspellDicts.ru_RU             # русская проверка орфографии
 
     # Файлы и торренты
     qbittorrent
 
-    # Живые обои: KDE-часть waywallen (сама программа — через Flatpak)
+    # Живые обои
     waywallenDisplay
 
     # Разное
