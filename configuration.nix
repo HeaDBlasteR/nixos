@@ -8,8 +8,11 @@ let
   claudeDesktop = (builtins.getFlake "github:aaddrick/claude-desktop-debian/${claudeDesktopRev}")
     .packages.${pkgs.stdenv.hostPlatform.system}.claude-desktop-fhs;
 
-  # KDE-плагин обоев для waywallen — свой пакет, см. pkgs/waywallen-display.nix
+  # KDE-плагин обоев для waywallen
   waywallenDisplay = pkgs.kdePackages.callPackage ./pkgs/waywallen-display.nix { };
+
+  # Драйвер сканера отпечатков
+  fingerprintOcv = pkgs.callPackage ./pkgs/fingerprint-ocv.nix { };
 in
 {
   imports = [ ./hardware-configuration.nix ];
@@ -37,12 +40,27 @@ in
   };
   services.fwupd.enable = true;
 
+  # --- Отпечаток пальца ---
+  # Сканер FPC 10a5:9201 не поддерживается libfprint, поэтому вместо fprintd
+  # работает fingerprint-ocv
+  services.fprintd.enable = true;
+  systemd.services.fprintd.serviceConfig = {
+    ExecStart = [
+      ""                                            # убрать запуск самого fprintd
+      "${fingerprintOcv}/bin/fingerprint-ocv --bus=system --min-score=0.30 --min-area=150000"
+    ];
+    Restart = "on-failure";                         # перезапуск, если драйвер упадёт
+    RestartSec = "1s";
+  };
+  systemd.services.fprintd.wantedBy = [ "multi-user.target" ];
+  # Вход в SDDM — только по паролю
+  security.pam.services.sddm.fprintAuth = false;
+
   # --- KDE Plasma 6 ---
   services.displayManager.sddm.enable = true;
   services.displayManager.sddm.wayland.enable = true;
   services.desktopManager.plasma6.enable = true;
   environment.sessionVariables.NIXOS_OZONE_WL = "1"; # VS Code, Chrome и др. Electron-приложения
-                                                     # работают нативно под Wayland, без размытия на 200%
 
   # --- Программы по умолчанию ---
   xdg.mime.defaultApplications = pkgs.lib.genAttrs [
@@ -96,8 +114,8 @@ in
   };
 
   # --- Steam и запись экрана ---
-  programs.steam.enable = true;                     # Steam
-  programs.obs-studio = {                           # OBS
+  programs.steam.enable = true;
+  programs.obs-studio = {
     enable = true;
     enableVirtualCamera = true;                     # «виртуальная камера» для Zoom/Discord
   };
