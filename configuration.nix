@@ -60,7 +60,7 @@ in
   services.displayManager.sddm.enable = true;
   services.displayManager.sddm.wayland.enable = true;
   services.desktopManager.plasma6.enable = true;
-  environment.sessionVariables.NIXOS_OZONE_WL = "1"; # VS Code, Chrome и др. Electron-приложения
+  environment.sessionVariables.NIXOS_OZONE_WL = "1"; # Electron-приложения
 
   # --- Программы по умолчанию ---
   xdg.mime.defaultApplications = pkgs.lib.genAttrs [
@@ -74,7 +74,7 @@ in
   ] (_: "code.desktop");
 
   # --- Звук ---
-  services.pulseaudio.enable = false;               # старый звуковой сервер выключен, его заменяет PipeWire
+  services.pulseaudio.enable = false;
   security.rtkit.enable = true;
   services.pipewire = {
     enable = true;
@@ -117,11 +117,14 @@ in
   programs.steam.enable = true;
   programs.obs-studio = {
     enable = true;
-    enableVirtualCamera = true;                     # «виртуальная камера» для Zoom/Discord
+    enableVirtualCamera = true;
   };
 
+  # --- Разделы дисков ---
+  programs.partition-manager.enable = true;
+
   # --- Flatpak ---
-  services.flatpak.enable = true;                   # программы с Flathub
+  services.flatpak.enable = true;
 
   # --- Синхронизация хранилища Obsidian ---
   services.syncthing = {
@@ -130,17 +133,17 @@ in
     dataDir = "/home/kuragy";
     openDefaultPorts = true;
     settings = {
-      options.urAccepted = -1;                      # не отправлять анонимную статистику
+      options.urAccepted = -1;
       devices.pc = {
         id = "WAYEFTG-H3OQ7XN-TITS4NG-ERDC4JG-EWAKDZG-YQTTON3-XPMUR37-R5YSJA2";
         name = "ПК";
-        addresses = [ "tcp://10.8.1.5:22000" ];     # только через туннель Amnezia
+        addresses = [ "tcp://10.8.1.5:22000" ];
       };
       folders.obsidian = {
-        id = "obsidian";                            # одинаковый ID на ноутбуке и ПК
+        id = "obsidian";
         label = "Obsidian";
         path = "/home/kuragy/Obsidian";
-        devices = [ "pc" ];                         # с кем синхронизировать
+        devices = [ "pc" ];
         versioning = {
           type = "trashcan";
           params.cleanoutDays = "30";
@@ -173,7 +176,7 @@ in
   services.postgresql = {
     enable = true;
     package = pkgs.postgresql_17;
-    ensureDatabases = [ "kuragy" ];                 # своя база с именем пользователя: `psql` без аргументов
+    ensureDatabases = [ "kuragy" ];
     ensureUsers = [{
       name = "kuragy";
       ensureDBOwnership = true;
@@ -229,6 +232,25 @@ in
 
     # Живые обои
     waywallenDisplay
+
+    # Видео
+    haruna                          # видеоплеер для KDE
+
+    # Архивы (Ark использует их для .7z и .rar)
+    p7zip unrar
+
+    # Учёба
+    xournalpp                       # рукописные пометки поверх PDF
+    qalculate-qt                    # калькулятор
+
+    # Система и диски
+    kdePackages.filelight           # чем занят диск
+    kdePackages.isoimagewriter      # запись загрузочной флешки
+    btop                            # монитор ресурсов
+
+    # Терминал
+    ripgrep fd bat tree
+    yt-dlp
 
     # Разное
     wget curl htop
